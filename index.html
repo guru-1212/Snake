@@ -54,6 +54,24 @@
       left: 10px;
       font-size: 20px;
     }
+
+    #controls {
+      margin-top: 20px;
+    }
+
+    #controls button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #008CBA;
+      color: white;
+      border: none;
+      margin: 5px;
+      cursor: pointer;
+    }
+
+    #controls button:hover {
+      background-color: #006080;
+    }
   </style>
 </head>
 <body>
@@ -62,9 +80,16 @@
     <h1>Game Over</h1>
     <p id="final-score">Score: 0</p>
     <button onclick="restartGame()">Restart</button>
-    <button onclick="sendScore()">Send Score</button>
   </div>
   <div id="score">Score: 0</div>
+  <div id="controls">
+    <button id="startBtn" onclick="startGame()">Start</button>
+    <button id="stopBtn" onclick="stopGame()">Stop</button>
+    <button id="leftBtn" onclick="changeDirection('left')">Left</button>
+    <button id="upBtn" onclick="changeDirection('up')">Up</button>
+    <button id="rightBtn" onclick="changeDirection('right')">Right</button>
+    <button id="downBtn" onclick="changeDirection('down')">Down</button>
+  </div>
 
   <script>
     const canvas = document.getElementById('game');
@@ -76,7 +101,8 @@
     let direction = 'right';
     let food = { x: 320, y: 320 };
     let gameOver = false;
-    let speed = 15; // Adjust this value to change the speed of the game
+    let gameRunning = false;
+    let speed = 10; // Adjust this value to change the speed of the game
     let score = 0;
 
     function getRandomFoodPosition() {
@@ -96,42 +122,9 @@
       snake.forEach(drawSnakePart);
     }
 
-    function changeDirection(event) {
-      const keyPressed = event.keyCode;
-      const left = 37;
-      const up = 38;
-      const right = 39;
-      const down = 40;
-
-      if (keyPressed === left && direction !== 'right') {
-        direction = 'left';
-      }
-
-      if (keyPressed === up && direction !== 'down') {
-        direction = 'up';
-      }
-
-      if (keyPressed === right && direction !== 'left') {
-        direction = 'right';
-      }
-
-      if (keyPressed === down && direction !== 'up') {
-        direction = 'down';
-      }
-    }
-
-    function handleOrientation(event) {
-      const { beta, gamma } = event; // Tilt along the x and y axes
-      const threshold = 15; // Sensitivity threshold
-
-      if (gamma > threshold && direction !== 'left') {
-        direction = 'right';
-      } else if (gamma < -threshold && direction !== 'right') {
-        direction = 'left';
-      } else if (beta > threshold && direction !== 'down') {
-        direction = 'up';
-      } else if (beta < -threshold && direction !== 'up') {
-        direction = 'down';
+    function changeDirection(newDirection) {
+      if (!gameOver && gameRunning) {
+        direction = newDirection;
       }
     }
 
@@ -189,53 +182,55 @@
       if (gameOver) {
         document.getElementById('final-score').innerText = 'Score: ' + score;
         document.getElementById('game-over').style.display = 'block';
+        gameRunning = false;
         return;
       }
 
-      requestAnimationFrame(main);
+      if (gameRunning) {
+        requestAnimationFrame(main);
 
-      if (++count < speed) {
-        return;
+        if (++count < speed) {
+          return;
+        }
+
+        count = 0;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        drawFood();
+        moveSnake();
+        drawSnake();
+
+        gameOver = checkCollision();
       }
-
-      count = 0;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      drawFood();
-      moveSnake();
-      drawSnake();
-
-      gameOver = checkCollision();
     }
 
     function restartGame() {
-      snake = [{ x: 160, y: 160 }, { x: 140, y: 160 }, { x: 120, y: 160 }, { x: 100, y: 160 }];
-      direction = 'right';
-      food = getRandomFoodPosition();
-      gameOver = false;
-      score = 0;
-      document.getElementById('score').innerText = 'Score: ' + score;
-      document.getElementById('game-over').style.display = 'none';
-      main();
-    }
+  snake = [{ x: 160, y: 160 }, { x: 140, y: 160 }, { x: 120, y: 160 }, { x: 100, y: 160 }];
+  direction = 'right';
+  food = getRandomFoodPosition();
+  score = 0;
+  document.getElementById('score').innerText = 'Score: ' + score;
+  document.getElementById('game-over').style.display = 'none';
+  gameOver = false;
+  gameRunning = true;
+  main();
+}
 
-    function sendScore() {
-      html2canvas(document.body).then(canvas => {
-        const imgData = canvas.toDataURL('image/png');
-        const link = document.createElement('a');
-        link.href = imgData;
-        link.download = 'snake-game-score.png';
-        link.click();
-      });
-    }
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('stopBtn').addEventListener('click', stopGame);
 
-    document.addEventListener('keydown', changeDirection);
-    window.addEventListener('deviceorientation', handleOrientation);
-
+function startGame() {
+  if (!gameRunning) {
+    gameRunning = true;
+    gameOver = false;
+    document.getElementById('game-over').style.display = 'none';
     main();
-  </script>
+  }
+}
 
-  <!-- Include html2canvas library for screenshot functionality -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.3.3/html2canvas.min.js"></script>
-</body>
-</html>
+function stopGame() {
+  gameRunning = false;
+}
+
+// Initialize the game
+restartGame();
