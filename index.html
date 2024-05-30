@@ -4,14 +4,238 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Snake Game</title>
-  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #000;
+      color: #fff;
+      font-family: Arial, sans-serif;
+    }
+
+    canvas {
+      border: 2px solid #fff;
+      background-color: #000;
+    }
+
+    #game-over {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      display: none;
+      background-color: rgba(0, 0, 0, 0.8);
+      padding: 20px;
+      border-radius: 10px;
+    }
+
+    #game-over button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      margin: 5px;
+      cursor: pointer;
+    }
+
+    #game-over button:hover {
+      background-color: #45a049;
+    }
+
+    #score {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 20px;
+    }
+  </style>
 </head>
 <body>
   <canvas id="game" width="400" height="400"></canvas>
   <div id="game-over">
     <h1>Game Over</h1>
+    <p id="final-score">Score: 0</p>
     <button onclick="restartGame()">Restart</button>
+    <button onclick="sendScore()">Send Score</button>
   </div>
-  <script src="index.js"></script>
+  <div id="score">Score: 0</div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+
+    const grid = 20;
+    let count = 0;
+    let snake = [{ x: 160, y: 160 }, { x: 140, y: 160 }, { x: 120, y: 160 }, { x: 100, y: 160 }];
+    let direction = 'right';
+    let food = { x: 320, y: 320 };
+    let gameOver = false;
+    let speed = 15; // Adjust this value to change the speed of the game
+    let score = 0;
+
+    function getRandomFoodPosition() {
+      let x = Math.floor((Math.random() * canvas.width) / grid) * grid;
+      let y = Math.floor((Math.random() * canvas.height) / grid) * grid;
+      return { x, y };
+    }
+
+    function drawSnakePart(snakePart) {
+      ctx.fillStyle = 'lightgreen';
+      ctx.strokeStyle = 'darkgreen';
+      ctx.fillRect(snakePart.x, snakePart.y, grid - 1, grid - 1);
+      ctx.strokeRect(snakePart.x, snakePart.y, grid - 1, grid - 1);
+    }
+
+    function drawSnake() {
+      snake.forEach(drawSnakePart);
+    }
+
+    function changeDirection(event) {
+      const keyPressed = event.keyCode;
+      const left = 37;
+      const up = 38;
+      const right = 39;
+      const down = 40;
+
+      if (keyPressed === left && direction !== 'right') {
+        direction = 'left';
+      }
+
+      if (keyPressed === up && direction !== 'down') {
+        direction = 'up';
+      }
+
+      if (keyPressed === right && direction !== 'left') {
+        direction = 'right';
+      }
+
+      if (keyPressed === down && direction !== 'up') {
+        direction = 'down';
+      }
+    }
+
+    function handleOrientation(event) {
+      const { beta, gamma } = event; // Tilt along the x and y axes
+      const threshold = 15; // Sensitivity threshold
+
+      if (gamma > threshold && direction !== 'left') {
+        direction = 'right';
+      } else if (gamma < -threshold && direction !== 'right') {
+        direction = 'left';
+      } else if (beta > threshold && direction !== 'down') {
+        direction = 'up';
+      } else if (beta < -threshold && direction !== 'up') {
+        direction = 'down';
+      }
+    }
+
+    function moveSnake() {
+      const head = { x: snake[0].x, y: snake[0].y };
+
+      if (direction === 'left') {
+        head.x -= grid;
+      }
+
+      if (direction === 'up') {
+        head.y -= grid;
+      }
+
+      if (direction === 'right') {
+        head.x += grid;
+      }
+
+      if (direction === 'down') {
+        head.y += grid;
+      }
+
+      snake.unshift(head);
+
+      if (head.x === food.x && head.y === food.y) {
+        food = getRandomFoodPosition();
+        score += 10;
+        document.getElementById('score').innerText = 'Score: ' + score;
+      } else {
+        snake.pop();
+      }
+    }
+
+    function checkCollision() {
+      for (let i = 4; i < snake.length; i++) {
+        if (snake[i].x === snake[0].x && snake[i].y === snake[0].y) {
+          return true;
+        }
+      }
+
+      const hitLeftWall = snake[0].x < 0;
+      const hitRightWall = snake[0].x >= canvas.width;
+      const hitTopWall = snake[0].y < 0;
+      const hitBottomWall = snake[0].y >= canvas.height;
+
+      return hitLeftWall || hitRightWall || hitTopWall || hitBottomWall;
+    }
+
+    function drawFood() {
+      ctx.fillStyle = 'red';
+      ctx.fillRect(food.x, food.y, grid - 1, grid - 1);
+    }
+
+    function main() {
+      if (gameOver) {
+        document.getElementById('final-score').innerText = 'Score: ' + score;
+        document.getElementById('game-over').style.display = 'block';
+        return;
+      }
+
+      requestAnimationFrame(main);
+
+      if (++count < speed) {
+        return;
+      }
+
+      count = 0;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      drawFood();
+      moveSnake();
+      drawSnake();
+
+      gameOver = checkCollision();
+    }
+
+    function restartGame() {
+      snake = [{ x: 160, y: 160 }, { x: 140, y: 160 }, { x: 120, y: 160 }, { x: 100, y: 160 }];
+      direction = 'right';
+      food = getRandomFoodPosition();
+      gameOver = false;
+      score = 0;
+      document.getElementById('score').innerText = 'Score: ' + score;
+      document.getElementById('game-over').style.display = 'none';
+      main();
+    }
+
+    function sendScore() {
+      html2canvas(document.body).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.href = imgData;
+        link.download = 'snake-game-score.png';
+        link.click();
+      });
+    }
+
+    document.addEventListener('keydown', changeDirection);
+    window.addEventListener('deviceorientation', handleOrientation);
+
+    main();
+  </script>
+
+  <!-- Include html2canvas library for screenshot functionality -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.3.3/html2canvas.min.js"></script>
 </body>
 </html>
